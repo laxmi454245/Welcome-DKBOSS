@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SMS Panel</title>
+
+<style>
+body {
+    font-family: Arial;
+    background: #0f172a;
+    color: white;
+    text-align: center;
+    padding: 20px;
+}
+.container {
+    background: #1e293b;
+    padding: 20px;
+    border-radius: 10px;
+    width: 350px;
+    margin: auto;
+}
+input, textarea {
+    width: 90%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border: none;
+}
+textarea {
+    height: 150px; /* 🔥 Bigger textbox */
+    resize: none;
+}
+button {
+    padding: 10px 15px;
+    margin: 5px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.update { background: #22c55e; }
+.send { background: #3b82f6; }
+.paste { background: #f59e0b; }
+.template { background: #6366f1; }
+.upload { background: #ec4899; }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h3>Bot Panel</h3>
+
+<p><b>Chat ID</b></p>
+<input type="text" id="chatId" placeholder="Enter Chat ID">
+<br>
+<button class="paste" onclick="pasteChat()">Paste</button>
+
+<hr>
+
+<h4>Templates</h4>
+
+<button class="template" onclick="loadTemplate('APK', template1)">APK</button>
+<button class="template" onclick="loadTemplate('LOGIN', template2)">LOGIN</button>
+<button class="template" onclick="loadTemplate('SUCCESS', template3)">SUCCESS</button>
+
+<hr>
+
+<h4>Custom Message</h4>
+
+<textarea id="customMsg" placeholder="Write message..."></textarea>
+<br>
+<button class="paste" onclick="pasteCustom()">Paste</button>
+
+<hr>
+
+<h4>Upload File</h4>
+
+<input type="file" id="fileInput">
+<br>
+<button class="upload" onclick="sendFile()">Send File</button>
+
+<br><br>
+<button class="send" onclick="sendMsg()">Send Message</button>
+
+</div>
+
+<script>
+
+// 🔒 Hidden Bot ID
+const BOT_ID = "8831349314:AAFD8lhdAQbot7oFeH1Vl0_wpnRFY-IIKEo";
+
+// 📩 Templates
+const template1 = `Purchase APK: 4
+
+Cash withdrawal successful. Please wait, we will send the APK details shortly.`;
+
+const template2 = `Login panel:
+https://lighthunter.vercel.app
+Go to Contact and download APK`;
+
+const template3 = `Your request submitted successfully.
+Reference ID: 7327`;
+
+// ✅ Load Template
+function loadTemplate(name, msg) {
+    document.getElementById("customMsg").value = msg;
+    alert("Template: " + name + " loaded ✅");
+}
+
+
+// 📋 Clipboard Paste (Mobile Friendly)
+async function pasteChat() {
+    try {
+        const text = await navigator.clipboard.readText();
+        document.getElementById("chatId").value = text;
+    } catch {
+        alert("Clipboard permission denied ❌");
+    }
+}
+
+async function pasteCustom() {
+    try {
+        const text = await navigator.clipboard.readText();
+        document.getElementById("customMsg").value = text;
+    } catch {
+        alert("Clipboard permission denied ❌");
+    }
+}
+
+
+// 🚀 Send Text Message
+function sendMsg() {
+    const chatId = document.getElementById("chatId").value;
+    const message = document.getElementById("customMsg").value;
+
+    if (!chatId || !message) {
+        alert("Chat ID aur message required hai");
+        return;
+    }
+
+    fetch(`https://api.telegram.org/bot${BOT_ID}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            chat_id: chatId,
+            text: message
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.ok ? "Message Sent ✅" : "Error ❌");
+    })
+    .catch(() => alert("Network Error ❌"));
+}
+
+
+// 📎 Send File (APK, PDF, CSV, Excel supported)
+function sendFile() {
+    const chatId = document.getElementById("chatId").value;
+    const file = document.getElementById("fileInput").files[0];
+
+    if (!chatId || !file) {
+        alert("Chat ID aur file required hai");
+        return;
+    }
+
+    let formData = new FormData();
+    formData.append("chat_id", chatId);
+    formData.append("document", file);
+
+    fetch(`https://api.telegram.org/bot${BOT_ID}/sendDocument`, {
+        method: "POST",
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.ok ? "File Sent ✅" : "Error ❌");
+    })
+    .catch(() => alert("Upload Failed ❌"));
+}
+
+</script>
+
+</body>
+</html>
