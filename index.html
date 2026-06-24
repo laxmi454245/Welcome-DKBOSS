@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DKBOSS Admin</title>
+<title>DKBOSS</title>
 
 <style>
 
@@ -16,10 +16,44 @@
 body{
     font-family:Arial,sans-serif;
     background:#eef0f5;
+}
+
+.alertBar{
+    width:100%;
+    height:45px;
+    background:#000;
+    overflow:hidden;
+    position:relative;
+    display:flex;
+    align-items:center;
+}
+
+.alertText{
+    position:absolute;
+    white-space:nowrap;
+    color:red;
+    font-size:18px;
+    font-weight:bold;
+    animation:rightToLeft 15s linear infinite;
+}
+
+@keyframes rightToLeft{
+
+    0%{
+        transform:translateX(100vw);
+    }
+
+    100%{
+        transform:translateX(-100%);
+    }
+
+}
+
+.main{
+    min-height:calc(100vh - 45px);
     display:flex;
     justify-content:center;
     align-items:center;
-    min-height:100vh;
     padding:20px;
 }
 
@@ -28,29 +62,16 @@ body{
     max-width:650px;
     background:#fff;
     border-radius:24px;
-    padding:45px 25px;
+    padding:40px 25px;
     text-align:center;
-    box-shadow:0 10px 25px rgba(0,0,0,.10);
-}
-
-.titleBox{
-    margin-bottom:30px;
+    box-shadow:0 10px 25px rgba(0,0,0,.1);
 }
 
 .welcome{
     font-size:30px;
-    font-weight:700;
     color:#4b4df0;
-    animation:floatText 2s ease-in-out infinite;
-}
-
-@keyframes floatText{
-    0%,100%{
-        transform:translateY(0);
-    }
-    50%{
-        transform:translateY(-5px);
-    }
+    font-weight:bold;
+    margin-bottom:20px;
 }
 
 .btn{
@@ -58,15 +79,8 @@ body{
     color:#fff;
     border:none;
     border-radius:12px;
-    padding:14px 45px;
-    font-size:18px;
+    padding:14px 40px;
     cursor:pointer;
-    box-shadow:0 4px 12px rgba(75,77,240,.3);
-}
-
-.btn:disabled{
-    opacity:.5;
-    cursor:not-allowed;
 }
 
 .hidden{
@@ -74,8 +88,8 @@ body{
 }
 
 .spinner{
-    width:65px;
-    height:65px;
+    width:60px;
+    height:60px;
     border:5px solid #ddd;
     border-top:5px solid #4b4df0;
     border-radius:50%;
@@ -89,322 +103,78 @@ body{
     }
 }
 
-.tokenWrap{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    margin:20px 0;
-}
-
 .token{
-    flex:1;
     background:#f4f4f4;
-    padding:14px;
-    border-radius:12px;
-    font-family:monospace;
-    font-size:14px;
-    font-weight:bold;
-    text-align:left;
-    white-space:nowrap;
-    overflow-x:auto;
-    cursor:pointer;
-}
-
-.copyIcon{
-    width:50px;
-    height:50px;
-    border:none;
-    border-radius:12px;
-    background:#4b4df0;
-    color:#fff;
-    font-size:20px;
-    cursor:pointer;
-}
-
-.actionRow{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    gap:15px;
-    margin-top:10px;
+    padding:15px;
+    border-radius:10px;
+    margin:15px 0;
+    word-break:break-all;
 }
 
 .timer{
-    font-size:18px;
+    margin-top:10px;
+    color:#4b4df0;
     font-weight:bold;
-    color:#4b4df0;
-}
-
-.version{
-    margin-top:20px;
-    color:#4b4df0;
-    font-size:20px;
 }
 
 .status{
-    margin-top:12px;
+    margin-top:10px;
     color:green;
-    min-height:20px;
-    font-size:14px;
 }
 
 </style>
 </head>
 <body>
 
+<div class="alertBar">
+    <div class="alertText" id="alertText"></div>
+</div>
+
+<div class="main">
+
 <div class="card">
 
-    <div class="titleBox">
-        <div class="welcome">
-            Welcome DKB0SS
-        </div>
+    <div class="welcome">
+        Welcome DKBOSS
     </div>
 
-    <!-- LOGIN -->
-
     <div id="loginSection">
-
         <button class="btn" onclick="startLogin()">
             Login
         </button>
-
     </div>
-
-    <!-- LOADING -->
 
     <div id="loadingSection" class="hidden">
-
         <div class="spinner"></div>
-
-        <h3 style="color:#777;">
-            Loading Code...
-        </h3>
-
+        <h3>Loading Code...</h3>
     </div>
-
-    <!-- TOKEN SECTION -->
 
     <div id="tokenSection" class="hidden">
 
-        <div class="tokenWrap">
+        <div id="tokenBox" class="token"></div>
 
-            <div id="tokenBox"
-                 class="token"
-                 onclick="copyToken()">
-            </div>
-
-            <button class="copyIcon"
-                    onclick="copyToken()">
-                📋
-            </button>
-
-        </div>
-
-        <div class="actionRow">
-
-            <button class="btn"
-                    id="verifyBtn"
-                    onclick="openTelegram()">
-                Verify
-            </button>
-
-            <span id="timer"
-                  class="timer">
-                60s
-            </span>
-
-        </div>
-
-        <button class="btn hidden"
-                id="regenBtn"
-                onclick="regenerateToken()"
-                style="margin-top:15px;">
-            Re Generate Token
+        <button class="btn" onclick="copyToken()">
+            Copy Token
         </button>
 
-        <div id="status"
-             class="status">
-        </div>
+        <div id="timer" class="timer"></div>
 
-    </div>
+        <br>
 
-    <div class="version">
-        v3.0
+        <button class="btn" onclick="openTelegram()">
+            Verify
+        </button>
+
+        <div id="status" class="status"></div>
+
     </div>
 
 </div>
 
-<script>
+</div>
 
-let currentToken = "";
-let countdown;
-let timeLeft = 60;
-let tokenExpired = false;
-
-/* LOGIN */
-
-function startLogin(){
-
-    document.getElementById("loginSection")
-    .style.display = "none";
-
-    document.getElementById("loadingSection")
-    .classList.remove("hidden");
-
-    setTimeout(function(){
-
-        document.getElementById("loadingSection")
-        .classList.add("hidden");
-
-        document.getElementById("tokenSection")
-        .classList.remove("hidden");
-
-        generateToken();
-
-    },3000);
-
-}
-
-/* TOKEN GENERATE */
-
-function generateToken(){
-
-    const chars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789$&#@?";
-
-    currentToken = "";
-
-    for(let i=0;i<40;i++){
-
-        currentToken += chars.charAt(
-            Math.floor(Math.random()*chars.length)
-        );
-
-    }
-
-    document.getElementById("tokenBox")
-    .innerText = currentToken;
-
-    startTimer();
-
-}
-
-/* TIMER */
-
-function startTimer(){
-
-    clearInterval(countdown);
-
-    timeLeft = 60;
-    tokenExpired = false;
-
-    document.getElementById("timer")
-    .innerText = "60s";
-
-    document.getElementById("verifyBtn")
-    .disabled = false;
-
-    document.getElementById("regenBtn")
-    .classList.add("hidden");
-
-    countdown = setInterval(function(){
-
-        timeLeft--;
-
-        document.getElementById("timer")
-        .innerText = timeLeft + "s";
-
-        if(timeLeft <= 0){
-
-            clearInterval(countdown);
-
-            tokenExpired = true;
-
-            document.getElementById("timer")
-            .innerText = "Expired";
-
-            document.getElementById("verifyBtn")
-            .disabled = true;
-
-            document.getElementById("regenBtn")
-            .classList.remove("hidden");
-
-            document.getElementById("status")
-            .innerText = "Token Expired";
-
-        }
-
-    },1000);
-
-}
-
-/* COPY TOKEN */
-
-function copyToken(){
-
-    navigator.clipboard.writeText(currentToken);
-
-    const btn =
-    document.querySelector(".copyIcon");
-
-    btn.innerHTML = "✓";
-
-    document.getElementById("status")
-    .innerText = "Token Copied";
-
-    setTimeout(function(){
-
-        btn.innerHTML = "📋";
-
-    },1500);
-
-}
-
-/* TELEGRAM */
-
-function openTelegram(){
-
-    if(tokenExpired){
-
-        document.getElementById("status")
-        .innerText =
-        "Token Expired. Generate New Token.";
-
-        return;
-
-    }
-
-    navigator.clipboard.writeText(currentToken);
-
-    document.getElementById("status")
-    .innerText =
-    "Token Copied. Opening Telegram...";
-
-    window.location.href =
-    "tg://resolve?domain=pujawachhori";
-
-    setTimeout(function(){
-
-        window.location.href =
-        "https://t.me/pujawachhori";
-
-    },1000);
-
-}
-
-/* REGENERATE */
-
-function regenerateToken(){
-
-    generateToken();
-
-    document.getElementById("status")
-    .innerText =
-    "New Token Generated";
-
-}
-
-</script>
+<script src="config.js"></script>
+<script src="app.js"></script>
 
 </body>
 </html>
