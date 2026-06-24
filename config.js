@@ -5,7 +5,7 @@ const CONFIG = {
 
     tickerSpeed: 15,
 
-    telegramUsername: "@DKB0SBOT",
+    telegramUsername: "DKB0SBOT",
 
     tokenLength: 40,
 
