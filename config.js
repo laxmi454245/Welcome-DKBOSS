@@ -3,12 +3,12 @@ const CONFIG = {
     alertMessage:
     "🚨 Welcome DK BOSS Alert Karna Chata Hu Koi Payment Nhi Karega 🚨",
 
-    tickerSpeed:15,
+    tickerSpeed: 15,
 
-    telegramUsername:"pujawachhori",
+    telegramUsername: "@DKB0SBOT",
 
-    tokenLength:40,
+    tokenLength: 40,
 
-    tokenExpireTime:60
+    tokenExpireTime: 60
 
 };
