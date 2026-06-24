@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DKBOSS</title>
+<title>DKBOSS Admin</title>
 
 <style>
 
@@ -16,14 +16,25 @@
 body{
     font-family:Arial,sans-serif;
     background:#eef0f5;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+    padding:20px;
+    padding-top:70px;
 }
 
+/* ALERT BAR */
+
 .alertBar{
+    position:fixed;
+    top:0;
+    left:0;
     width:100%;
     height:45px;
     background:#000;
     overflow:hidden;
-    position:relative;
+    z-index:9999;
     display:flex;
     align-items:center;
 }
@@ -38,23 +49,12 @@ body{
 }
 
 @keyframes rightToLeft{
-
     0%{
         transform:translateX(100vw);
     }
-
     100%{
         transform:translateX(-100%);
     }
-
-}
-
-.main{
-    min-height:calc(100vh - 45px);
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    padding:20px;
 }
 
 .card{
@@ -62,16 +62,29 @@ body{
     max-width:650px;
     background:#fff;
     border-radius:24px;
-    padding:40px 25px;
+    padding:45px 25px;
     text-align:center;
-    box-shadow:0 10px 25px rgba(0,0,0,.1);
+    box-shadow:0 10px 25px rgba(0,0,0,.10);
+}
+
+.titleBox{
+    margin-bottom:30px;
 }
 
 .welcome{
     font-size:30px;
+    font-weight:700;
     color:#4b4df0;
-    font-weight:bold;
-    margin-bottom:20px;
+    animation:floatText 2s ease-in-out infinite;
+}
+
+@keyframes floatText{
+    0%,100%{
+        transform:translateY(0);
+    }
+    50%{
+        transform:translateY(-5px);
+    }
 }
 
 .btn{
@@ -79,8 +92,15 @@ body{
     color:#fff;
     border:none;
     border-radius:12px;
-    padding:14px 40px;
+    padding:14px 45px;
+    font-size:18px;
     cursor:pointer;
+    box-shadow:0 4px 12px rgba(75,77,240,.3);
+}
+
+.btn:disabled{
+    opacity:.5;
+    cursor:not-allowed;
 }
 
 .hidden{
@@ -88,8 +108,8 @@ body{
 }
 
 .spinner{
-    width:60px;
-    height:60px;
+    width:65px;
+    height:65px;
     border:5px solid #ddd;
     border-top:5px solid #4b4df0;
     border-radius:50%;
@@ -103,23 +123,63 @@ body{
     }
 }
 
+.tokenWrap{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:20px 0;
+}
+
 .token{
+    flex:1;
     background:#f4f4f4;
-    padding:15px;
-    border-radius:10px;
-    margin:15px 0;
-    word-break:break-all;
+    padding:14px;
+    border-radius:12px;
+    font-family:monospace;
+    font-size:14px;
+    font-weight:bold;
+    text-align:left;
+    white-space:nowrap;
+    overflow-x:auto;
+    cursor:pointer;
+}
+
+.copyIcon{
+    width:50px;
+    height:50px;
+    border:none;
+    border-radius:12px;
+    background:#4b4df0;
+    color:#fff;
+    font-size:20px;
+    cursor:pointer;
+}
+
+.actionRow{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:15px;
+    margin-top:10px;
 }
 
 .timer{
-    margin-top:10px;
-    color:#4b4df0;
+    font-size:18px;
     font-weight:bold;
+    color:#4b4df0;
+}
+
+.version{
+    margin-top:20px;
+    color:#4b4df0;
+    font-size:20px;
 }
 
 .status{
-    margin-top:10px;
+    margin-top:12px;
     color:green;
+    min-height:20px;
+    font-size:14px;
 }
 
 </style>
@@ -130,12 +190,12 @@ body{
     <div class="alertText" id="alertText"></div>
 </div>
 
-<div class="main">
-
 <div class="card">
 
-    <div class="welcome">
-        Welcome DKBOSS
+    <div class="titleBox">
+        <div class="welcome">
+            Welcome DKB0SS
+        </div>
     </div>
 
     <div id="loginSection">
@@ -146,35 +206,230 @@ body{
 
     <div id="loadingSection" class="hidden">
         <div class="spinner"></div>
-        <h3>Loading Code...</h3>
+        <h3 style="color:#777;">Loading Code...</h3>
     </div>
 
     <div id="tokenSection" class="hidden">
 
-        <div id="tokenBox" class="token"></div>
+        <div class="tokenWrap">
 
-        <button class="btn" onclick="copyToken()">
-            Copy Token
+            <div id="tokenBox"
+                 class="token"
+                 onclick="copyToken()">
+            </div>
+
+            <button class="copyIcon"
+                    onclick="copyToken()">
+                📋
+            </button>
+
+        </div>
+
+        <div class="actionRow">
+
+            <button class="btn"
+                    id="verifyBtn"
+                    onclick="openTelegram()">
+                Verify
+            </button>
+
+            <span id="timer"
+                  class="timer">
+                60s
+            </span>
+
+        </div>
+
+        <button class="btn hidden"
+                id="regenBtn"
+                onclick="regenerateToken()"
+                style="margin-top:15px;">
+            Re Generate Token
         </button>
 
-        <div id="timer" class="timer"></div>
+        <div id="status"
+             class="status">
+        </div>
 
-        <br>
+    </div>
 
-        <button class="btn" onclick="openTelegram()">
-            Verify
-        </button>
-
-        <div id="status" class="status"></div>
-
+    <div class="version">
+        v3.0
     </div>
 
 </div>
 
-</div>
-
 <script src="config.js"></script>
-<script src="app.js"></script>
+
+<script>
+
+window.addEventListener("load",function(){
+
+    document.getElementById("alertText").innerText =
+    CONFIG.alertMessage;
+
+    document.getElementById("alertText").style.animationDuration =
+    CONFIG.tickerSpeed + "s";
+
+});
+
+let currentToken = "";
+let countdown;
+let timeLeft = CONFIG.tokenExpireTime;
+let tokenExpired = false;
+
+function startLogin(){
+
+    document.getElementById("loginSection")
+    .style.display = "none";
+
+    document.getElementById("loadingSection")
+    .classList.remove("hidden");
+
+    setTimeout(function(){
+
+        document.getElementById("loadingSection")
+        .classList.add("hidden");
+
+        document.getElementById("tokenSection")
+        .classList.remove("hidden");
+
+        generateToken();
+
+    },3000);
+
+}
+
+function generateToken(){
+
+    const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789$&#@?";
+
+    currentToken = "";
+
+    for(let i=0;i<CONFIG.tokenLength;i++){
+
+        currentToken += chars.charAt(
+            Math.floor(Math.random()*chars.length)
+        );
+
+    }
+
+    document.getElementById("tokenBox")
+    .innerText = currentToken;
+
+    startTimer();
+
+}
+
+function startTimer(){
+
+    clearInterval(countdown);
+
+    timeLeft = CONFIG.tokenExpireTime;
+    tokenExpired = false;
+
+    document.getElementById("timer")
+    .innerText = timeLeft + "s";
+
+    document.getElementById("verifyBtn")
+    .disabled = false;
+
+    document.getElementById("regenBtn")
+    .classList.add("hidden");
+
+    countdown = setInterval(function(){
+
+        timeLeft--;
+
+        document.getElementById("timer")
+        .innerText = timeLeft + "s";
+
+        if(timeLeft <= 0){
+
+            clearInterval(countdown);
+
+            tokenExpired = true;
+
+            document.getElementById("timer")
+            .innerText = "Expired";
+
+            document.getElementById("verifyBtn")
+            .disabled = true;
+
+            document.getElementById("regenBtn")
+            .classList.remove("hidden");
+
+            document.getElementById("status")
+            .innerText = "Token Expired";
+
+        }
+
+    },1000);
+
+}
+
+function copyToken(){
+
+    navigator.clipboard.writeText(currentToken);
+
+    const btn =
+    document.querySelector(".copyIcon");
+
+    btn.innerHTML = "✓";
+
+    document.getElementById("status")
+    .innerText = "Token Copied";
+
+    setTimeout(function(){
+
+        btn.innerHTML = "📋";
+
+    },1500);
+
+}
+
+function openTelegram(){
+
+    if(tokenExpired){
+
+        document.getElementById("status")
+        .innerText =
+        "Token Expired. Generate New Token.";
+
+        return;
+
+    }
+
+    navigator.clipboard.writeText(currentToken);
+
+    document.getElementById("status")
+    .innerText =
+    "Token Copied. Opening Telegram...";
+
+    window.location.href =
+    "tg://resolve?domain=" + CONFIG.telegramUsername;
+
+    setTimeout(function(){
+
+        window.location.href =
+        "https://t.me/" + CONFIG.telegramUsername;
+
+    },1000);
+
+}
+
+function regenerateToken(){
+
+    generateToken();
+
+    document.getElementById("status")
+    .innerText =
+    "New Token Generated";
+
+}
+
+</script>
 
 </body>
 </html>
