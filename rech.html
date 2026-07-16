@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BABA MNGL - Admin Control Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --primary: #00ff66;
+      --bg: #0d0e12;
+      --card-bg: #161820;
+      --text: #ffffff;
+      --text-muted: #8b949e;
+      --border: #30363d;
+    }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    h1, h2 {
+      margin: 0;
+      color: var(--primary);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 30px;
+    }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    input, button {
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #21262d;
+      color: var(--text);
+      font-size: 14px;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    button {
+      background: var(--primary);
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+      transition: 0.2s;
+    }
+    button:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+    .btn-danger {
+      background: #ff3b30;
+      color: white;
+    }
+    .btn-action {
+      padding: 5px 10px;
+      font-size: 12px;
+      margin-right: 5px;
+    }
+    .badge {
+      padding: 4px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: bold;
+      background: rgba(0, 255, 102, 0.1);
+      color: var(--primary);
+    }
+    .history-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .history-item {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .history-item:last-child { border: none; }
+  </style>
+  
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div>
+        <h1>BABA MNGL</h1>
+        <p style="color: var(--text-muted); margin: 5px 0 0 0;">Live System Web Control Panel</p>
+      </div>
+      <div>
+        <span class="badge" style="font-size: 14px; padding: 8px 16px;">System Live 🟢</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h2>👥 Active Users Wallet Control</h2>
+          <div style="overflow-x: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>User ID</th>
+                  <th>Name</th>
+                  <th>Username</th>
+                  <th>Wallet Balance</th>
+                  <th>Quick Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody">
+                <tr>
+                  <td colspan="5" style="text-align: center; color: var(--text-muted);">Loading Users from Firebase...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h2>📜 Search History Backups</h2>
+          <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 15px;">Users ki processed search sheets yahan se download karein.</p>
+          <div class="history-list" id="historyContainer">
+            <div style="text-align: center; padding: 20px; color: var(--text-muted);">Loading search logs...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ================= FIREBASE WEB CONFIGURATION =================
+    const firebaseConfig = {  
+      apiKey: "AIzaSyD7kr-x5CJLdWGoj6r_MAPmhnJWe8Jc3oI",  
+      authDomain: "ss22-a96d3.firebaseapp.com",  
+      projectId: "ss22-a96d3",  
+      storageBucket: "ss22-a96d3.appspot.com",  
+      messagingSenderId: "607942972170",  
+      appId: "1:607942972170:web:2e38b2d5410ff37f3960f3"  
+    };
+    
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // ================= LOAD & SYNC USERS (REAL-TIME) =================
+    db.collection("bot_users").onSnapshot((snapshot) => {
+      const tbody = document.getElementById("usersTableBody");
+      tbody.innerHTML = "";
+      
+      if (snapshot.empty) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No users found in database.</td></tr>`;
+        return;
+      }
+
+      snapshot.forEach((doc) => {
+        const user = doc.data();
+        const userId = doc.id;
+        const balance = parseFloat(user.balance || 0).toFixed(2);
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><code>${userId}</code></td>
+          <td><strong>${user.name || 'No Name'}</strong></td>
+          <td><a href="https://t.me/${user.username}" target="_blank" style="color: var(--primary); text-decoration: none;">@${user.username || 'N/A'}</a></td>
+          <td><span style="color: #00ff66; font-weight: bold;">₹${balance}</span></td>
+          <td>
+            <button class="btn-action" onclick="adjustBalance('${userId}', 50)">+₹50</button>
+            <button class="btn-action" onclick="adjustBalance('${userId}', 100)">+₹100</button>
+            <button class="btn-action" onclick="promptCustomBalance('${userId}', ${balance})">Edit</button>
+            <button class="btn-action btn-danger" onclick="adjustBalance('${userId}', -50)">-₹50</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    });
+
+    // ================= RECHARGE / DEDUCT LOGIC (FIXED) =================
+    function adjustBalance(userId, amount) {
+      // FIXED: .document() ko badal kar .doc() kiya hai
+      const userRef = db.collection("bot_users").doc(userId);
+      db.runTransaction((transaction) => {
+        return transaction.get(userRef).then((doc) => {
+          if (!doc.exists) {
+            alert("User nahi mila!");
+            return;
+          }
+          const currentBal = parseFloat(doc.data().balance || 0);
+          const newBal = Math.max(0, currentBal + amount);
+          transaction.update(userRef, { balance: newBal });
+        });
+      }).then(() => {
+        console.log("Balance successfully updated!");
+      }).catch((err) => {
+        alert("Error updating balance: " + err.message);
+      });
+    }
+
+    function promptCustomBalance(userId, currentBal) {
+      const customAmount = prompt(`Enter exact new balance for User ID ${userId}:`, currentBal);
+      if (customAmount === null || customAmount === "") return;
+      
+      const newBal = parseFloat(customAmount);
+      if (isNaN(newBal) || newBal < 0) {
+        alert("Kripya valid numeric value enter karein!");
+        return;
+      }
+
+      // FIXED: .document() ko .doc() kiya hai
+      db.collection("bot_users").doc(userId).update({
+        balance: newBal
+      }).then(() => {
+        alert("Balance custom update ho gaya!");
+      }).catch((err) => {
+        alert("Custom update error: " + err.message);
+      });
+    }
+
+    // ================= SEARCH HISTORY LOGS & EXCEL DOWNLOAD =================
+    db.collection("search_history").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+      const historyContainer = document.getElementById("historyContainer");
+      historyContainer.innerHTML = "";
+
+      if (snapshot.empty) {
+        historyContainer.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted);">Koi search backup records nahi hain.</div>`;
+        return;
+      }
+
+      snapshot.forEach((doc) => {
+        const log = doc.data();
+        const date = log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleString() : "Just Now";
+        
+        // Dynamic Excel rows check aur clean string creation
+        let rawDataString = "[]";
+        if (log.excel_data) {
+          // Agar database me array structured hai toh use raw formats me convert kar raha hai
+          const cleanRows = log.excel_data.map(item => {
+            if (item.mapValue && item.mapValue.fields) {
+              let rowObj = {};
+              for (let key in item.mapValue.fields) {
+                rowObj[key] = item.mapValue.fields[key].stringValue || "";
+              }
+              return rowObj;
+            }
+            return item;
+          });
+          rawDataString = JSON.stringify(cleanRows);
+        }
+
+        const item = document.createElement("div");
+        item.className = "history-item";
+        
+        // Escaping single quotes safely inside onclick functions
+        const safeDataStr = rawDataString.replace(/'/g, "&apos;");
+
+        item.innerHTML = `
+          <div>
+            <div style="font-weight: bold; color: #fff;">${log.name || 'User'} (${log.user_id})</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">
+              Base: <strong>${log.base_ca || 'N/A'}</strong> | Qty: <strong>${log.quantity || 0}</strong>
+            </div>
+            <div style="font-size: 10px; color: #00ff66; margin-top: 2px;">${date}</div>
+          </div>
+          <button class="btn-action" style="background:#28a745; color:white;" onclick='downloadBackupExcel(${safeDataStr}, "${log.name || "User"}_${log.base_ca || "sheet"}")'>
+            📥 Download
+          </button>
+        `;
+        historyContainer.appendChild(item);
+      });
+    });
+
+    function downloadBackupExcel(data, fileNamePrefix) {
+      if (!data || data.length === 0) {
+        alert("Is record ka backup data empty hai!");
+        return;
+      }
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Recovered Data");
+      XLSX.writeFile(wb, `${fileNamePrefix}_Backup.xlsx`);
+    }
+  </script>
+</body>
+</html>
