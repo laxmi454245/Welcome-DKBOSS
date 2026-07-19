@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">  
+  <title>Bulk Bill Data Export - User</title>  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <style>  
+    /* ===== GENERAL ===== */  
+    body{font-family:Arial,sans-serif;background:#f2f2f2;margin:0;padding:0;line-height:1.4;}  
+    .box{background:#fff;padding:15px 20px;border-radius:10px;max-width:900px;margin:20px auto;box-shadow:0 0 10px #ccc;}  
+    textarea,input,button{width:100%;padding:12px;margin:8px 0;font-size:16px;border-radius:6px;border:1px solid #ccc;box-sizing:border-box;}  
+    button{background:#000;color:#fff;cursor:pointer;transition:0.2s;}  
+    button:hover{background:#333;}  
+    .progress-wrap{width:100%;background:#ddd;border-radius:10px;overflow:hidden;margin:10px 0;}  
+    .progress-bar{height:22px;background:#007bff;width:0%;color:#fff;text-align:center;line-height:22px;font-size:13px;transition:0.3s;}  
+      
+    /* ===== TOP BAR ===== */  
+    #topBar{  
+      position:fixed;  
+      top:0;  
+      left:0;  
+      right:0;  
+      background:#000;  
+      color:#0f0;  
+      padding:10px 15px;  
+      z-index:998;  
+      display:flex;  
+      justify-content:flex-end;  
+      align-items:center;  
+      box-shadow:0 2px 5px rgba(0,0,0,0.5);  
+    }  
+    #topBar #walletAmount{font-weight:bold; font-size:14px;}  
+      
+    /* ===== MENU BUTTON ===== */  
+    #menuBtn{  
+      position:fixed;  
+      top:10px;  
+      left:5px;  
+      z-index:1001;  
+      background:#000;  
+      color:#0f0;  
+      border:none;  
+      padding:5px 8px;  
+      cursor:pointer;  
+      border-radius:4px;  
+      font-size:14px;  
+      width:auto;  
+    }  
+      
+    /* ===== CONTENT PADDING ===== */  
+    body > .content{padding-top:60px;}   
+      
+    /* ===== HISTORY & LIVE RESULTS ===== */  
+    .history{font-size:12px;background:#111;color:#0f0;padding:10px;border-radius:5px;max-height:220px;overflow:auto;word-break:break-word;}  
+    #liveBulk{background:#111;color:#0f0;padding:10px;border-radius:6px;max-height:220px;overflow:auto;font-size:13px;word-break:break-word;white-space:pre-wrap;}  
+    #liveCounter{font-weight:bold; color:#28a745; margin:5px 0; font-size:15px;}
+    #totalScannedCounter{font-weight:normal; color:#666; font-size:13px; margin-bottom:10px;}
+      
+    /* ===== SIDE MENU ===== */  
+    #sideMenu{  
+      position:fixed;  
+      left:-300px;  
+      top:0;  
+      width:260px;  
+      height:100%;  
+      background:#111;  
+      color:#0f0;  
+      padding:0px;  
+      transition:left 0.3s ease;  
+      z-index:1000;  
+      box-shadow: 2px 0 5px rgba(0,0,0,0.5);  
+    }  
+    #sideMenu button{  
+      width:100%;  
+      margin:10px 0;  
+      padding:10px;  
+      background:#000;  
+      color:#0f0;  
+      border:none;  
+      cursor:pointer;  
+      border-radius:5px;  
+      font-size:14px;  
+    }  
+      
+    /* ===== LOGIN BOX ===== */  
+    #loginBox{max-width:350px;margin:80px auto 20px auto;}  
+      
+    @media screen and (max-width:600px){  
+      .box{margin:15px;}  
+      #topBar{flex-direction:column;align-items:flex-end;}  
+      #topBar div{margin-top:5px;}  
+      textarea,input,button{font-size:14px;padding:10px;}  
+    }  
+  </style>  
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>  
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>  
+  <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>  
+</head>  
+<body>  
+
+  <button id="menuBtn" onclick="toggleMenu()">☰ Menu</button>
+
+  <div id="topBar">  
+    <div>💰 Wallet: ₹ <span id="walletAmount">0</span></div>  
+  </div>  
+
+  <div class="content">  
+    <div id="sideMenu">  
+      <h3 style="padding-left:15px;">Menu</h3>  
+      <hr style="border-color:#0f0;">  
+      <div style="padding:15px;">
+        <button onclick="showPasswordChange()">Password Change</button>  
+        <a href="https://t.me/babajisupport" target="_blank"><button>Contact Support</button></a>  
+        <button onclick="closeMenu()" style="color:red;">Close Menu</button>  
+      </div>
+    </div>  
+
+    <div id="loginBox" class="box">  
+      <h2>Login</h2>  
+      <input type="password" id="loginPass" placeholder="Password">  
+      <button onclick="doLogin()">Login</button>  
+    </div>  
+
+    <div id="app" style="display:none">  
+      <div class="box">  
+        <h2>Admin BABA IGL</h2>  
+        
+        <h3>Single Search</h3>  
+        <input id="consumer" placeholder="Single CA / BP Number">  
+        <button onclick="fetchSingleBill()">Get Bill</button>  
+        <pre id="result" style="background:#f8f9fa; padding:10px; border-radius:5px; overflow:auto; max-height:200px;"></pre>
+
+        <h3>Smart Auto-Loop Bulk Search (IGL Data)</h3>  
+        <input type="number" id="startCA" placeholder="Starting CA / BP Number (e.g. 400012345)">
+        <input type="number" id="targetQty" placeholder="Kitni VALID Quantity Chahiye? (e.g. 100)">
+        
+        <button onclick="startAutoLoopProcessing()" style="background:#007bff;">Start Smart Loop</button>
+        <button onclick="stopAutoLoopProcessing()" id="stopBtn" style="display:none; background:#dc3545;">Stop Loop</button>
+        <button onclick="exportBulkToExcel()" id="bulkExportBtn" style="display:none; background:#28a745;">Export Excel</button>  
+        
+        <div id="liveCounter">Valid Found: 0 / 0</div>
+        <div id="totalScannedCounter">Total Checked (Including Not Found): 0</div>
+
+        <div class="progress-wrap">  
+          <div class="progress-bar" id="progressBar">0%</div>  
+        </div>  
+        
+        <h3>📥 Live Realtime Success Data</h3>  
+        <div id="liveBulk">Waiting for system to start...</div>  
+        
+        <h3>📜 Wallet & Dynamic Loop History</h3>  
+        <div class="history" id="walletHistory">Loading...</div>  
+      </div>  
+    </div>  
+  </div> 
+
+  <script>  
+    // ================= FIREBASE INIT =================  
+    const firebaseConfig = {  
+      apiKey:"AIzaSyD7kr-x5CJLdWGoj6r_MAPmhnJWe8Jc3oI",  
+      authDomain:"ss22-a96d3.firebaseapp.com",  
+      projectId:"ss22-a96d3",  
+      storageBucket:"ss22-a96d3.appspot.com",  
+      messagingSenderId:"607942972170",  
+      appId:"1:607942972170:web:2e38b2d5410ff37f3960f3"  
+    };  
+    firebase.initializeApp(firebaseConfig);  
+    const db = firebase.firestore();  
+      
+    // ================= LOGIN (RESTORED ORIGINAL PATH) =================  
+    const loginId = "login-passwordmngl";  
+      
+    function doLogin(){  
+      const enteredPass = loginPass.value;  
+      if(!enteredPass) return alert("Enter password");  
+        
+      db.collection("logins").doc(loginId).get().then(doc=>{  
+        if(!doc.exists){  
+          db.collection("logins").doc(loginId).set({password:"1234"}).then(()=>{  
+            if(enteredPass==="1234") initApp();  
+            else alert("Wrong password");  
+          });  
+        } else {  
+          const pass = doc.data().password;  
+          if(enteredPass===pass) initApp();  
+          else alert("Wrong password");  
+        }  
+      });  
+    }  
+      
+    function initApp(){  
+      loginBox.style.display="none";  
+      app.style.display="block";  
+      listenWallet();  
+      loadHistory();  
+    }  
+      
+    // ================= WALLET (RESTORED ORIGINAL ID) =================  
+    const userId = "walletmngl01";  
+    let walletReady=false;  
+    function listenWallet(){  
+      db.collection("wallets").doc(userId).onSnapshot(d=>{  
+        if(!d.exists){  
+          db.collection("wallets").doc(userId).set({balance:0});  
+          walletAmount.innerText=0;  
+        }else{  
+          walletAmount.innerText=d.data().balance||0;  
+        }  
+        walletReady=true;  
+      });  
+    }  
+      
+    // ================= SECURE WALLET DEDUCTION =================  
+    function deductWalletSecure(amount, reason, bp, startCA, currentCA){  
+      return new Promise((resolve, reject) => {
+        const ref = db.collection("wallets").doc(userId);  
+        ref.get().then(doc=>{  
+            let current = doc.exists ? doc.data().balance || 0 : 0;  
+            if(current < amount) {
+                return reject("Insufficient Balance");
+            }
+            let newBalance = current - amount;  
+            ref.set({balance:newBalance}).then(()=>{  
+                ref.collection("history").add({  
+                    type:"deduct",  
+                    amount:amount,  
+                    reason:reason,  
+                    bp:bp||"",  
+                    startCA:startCA||"",
+                    endCA:currentCA||"",
+                    time:Date.now()  
+                });  
+                resolve(true);
+            }).catch(err => reject(err));  
+        }).catch(err => reject(err));  
+      });
+    }  
+      
+    // ================= SINGLE SEARCH =================  
+    function fetchSingleBill(){  
+        if(!walletReady) return alert("Wallet loading, please wait...");  
+        let caVal = consumer.value.trim();
+        if(!caVal) return alert("Please enter a CA number");
+
+        if(parseFloat(walletAmount.innerText) < 1) return alert("Wallet balance insufficient!");  
+          
+        deductWalletSecure(1,"Single Search", caVal, caVal, caVal).then(() => {
+            result.innerText = "Fetching data...";
+            fetch(`https://iglknow.vercel.app/api?ca_no=${caVal}`)  
+            .then(r=>r.json())  
+            .then(d=>{
+                result.innerText=JSON.stringify(d,null,2);
+            })
+            .catch(err => {
+                result.innerText = "API Error or Connection Failed.";
+            });  
+        }).catch(err => alert(err));
+    }  
+      
+    // ================= SMART AUTO-LOOP ENGINE (IGL) =================  
+    let bulkData=[], validFound=0, totalScanned=0, maxTarget=0, initialStartCA=0, currentCA=0, seriesType="1";
+    let loopActive=false;
+
+    function startAutoLoopProcessing(){  
+      if(loopActive) return;  
+      
+      let startVal = document.getElementById("startCA").value.trim();
+      let targetVal = document.getElementById("targetQty").value.trim();
+      
+      if(!startVal || !targetVal) return alert("Starting CA aur Target Quantity dono dalein!");
+      
+      seriesType = prompt("Series Type Select Karein:\n1 = Continuous (+1, +2, +3...)\n2 = Odd Increment Logic (+2, +4...)\n3 = Even Increment Logic (+2, +4...)");
+      if(!seriesType || !["1", "2", "3"].includes(seriesType)) return alert("Invalid Selection!");
+
+      maxTarget = parseInt(targetVal);
+      initialStartCA = parseInt(startVal);
+      currentCA = parseInt(startVal);
+      
+      // Reset Status Variables
+      bulkData = []; 
+      validFound = 0; 
+      totalScanned = 0;
+      loopActive = true;
+      
+      liveBulk.innerText = "";  
+      progressBar.style.width = "0%";  
+      progressBar.innerText = "0%";  
+      bulkExportBtn.style.display = "none";  
+      document.getElementById("stopBtn").style.display = "block";
+      
+      updateInterface();
+      executeNextLoopStep();
+    }  
+      
+    function executeNextLoopStep(){  
+      if(!loopActive) return;
+      
+      if(validFound >= maxTarget){  
+        endProcessingSequence(true);
+        return;  
+      }  
+       
+      if(parseFloat(walletAmount.innerText) < 1) {
+        alert("Wallet balance khatam ho gaya! Loop yahin ruk gaya.");
+        endProcessingSequence(false);
+        return;
+      }
+
+      totalScanned++;
+      let checkingCA = currentCA;
+      
+      if(seriesType === "1") {
+        currentCA += 1;
+      } else {
+        currentCA += 2;
+      }
+
+      deductWalletSecure(1, "Auto Loop Search", checkingCA, initialStartCA, checkingCA).then(() => {
+        fetch(`https://iglknow.vercel.app/api?ca_no=${checkingCA}`)  
+        .then(r=>r.json())  
+        .then(res=>{  
+          let d = res.data || {};
+          let custName = d.name || "Not Found";
+          
+          if(custName !== "Not Found" && res.status === "success") {
+            validFound++;
+            
+            let row={  
+              "Serial No": validFound, 
+              "Name": custName,                  
+              "Mobile": d.mobile || "Not Found",        
+              "BP Number": d.bpNumber || checkingCA,
+              "Email": d.email || "Not Found"
+            };  
+            bulkData.push(row);  
+            
+            liveBulk.innerText += `[SUCCESS #${validFound}] CA: ${row["BP Number"]} | ${row.Name} | ${row.Mobile}\n`;
+          }
+          
+          updateInterface();
+          setTimeout(executeNextLoopStep, 300); 
+        })  
+        .catch(()=>{  
+          updateInterface();
+          setTimeout(executeNextLoopStep, 300);
+        });  
+      }).catch(err => {
+        alert("Wallet Error: " + err);
+        endProcessingSequence(false);
+      });
+    }  
+
+    function updateInterface() {
+      document.getElementById("liveCounter").innerText = `Valid Found: ${validFound} / ${maxTarget}`;
+      document.getElementById("totalScannedCounter").innerText = `Total Checked (Including Not Found): ${totalScanned}`;
+      
+      let percent = Math.round((validFound / maxTarget) * 100);
+      if(percent > 100) percent = 100;
+      progressBar.style.width = percent + "%";  
+      progressBar.innerText = percent + "%";
+    }
+
+    function stopAutoLoopProcessing() {
+      loopActive = false;
+      endProcessingSequence(false);
+    }
+
+    function endProcessingSequence(isFinished) {
+      loopActive = false;
+      document.getElementById("stopBtn").style.display = "none";
+      if(bulkData.length > 0) {
+        document.getElementById("bulkExportBtn").style.display = "block";
+      }
+      if(isFinished) {
+        alert(`Process complete! Aapka IGL Target Count (${maxTarget}) successfully poora ho gaya hai.`);
+      } else {
+        alert(`Process rok diya gaya hai. Abhi tak total ${validFound} valid IGL data mila.`);
+      }
+    }
+      
+    // ================= CLEAN EXCEL EXPORT =================  
+    function exportBulkToExcel(){  
+      if(bulkData.length===0) return alert("Export ke liye koi valid data nahi mila!");  
+      
+      const finalExcelData = bulkData.map((item, index) => {
+        return {
+          "Serial No": index + 1,
+          "Name": item["Name"],
+          "Mobile": item["Mobile"],
+          "BP Number": item["BP Number"],
+          "Email": item["Email"]
+        };
+      });
+
+      const ws=XLSX.utils.json_to_sheet(finalExcelData);  
+      const wb=XLSX.utils.book_new();  
+      XLSX.utils.book_append_sheet(wb,ws,"IGL Bulk Bills");  
+      XLSX.writeFile(wb,`IGL_Bulk_Bill_${Date.now()}.xlsx`);  
+    }  
+      
+    // ================= WALLET HISTORY PANE WITH ADVANCED METRICS =================  
+    function loadHistory(){  
+      db.collection("wallets").doc(userId).collection("history")  
+      .orderBy("time","desc").limit(20)  
+      .onSnapshot(s=>{  
+        let out="";  
+        s.forEach(d=>{  
+          let x=d.data();  
+          let startRange = x.startCA ? x.startCA : "N/A";
+          let endRange = x.endCA ? x.endCA : "N/A";
+          
+          out+=`${x.type.toUpperCase()} ₹${x.amount} | ${x.reason} | Last BP: ${x.bp||"N/A"} | (Range: ${startRange} -> ${endRange})\n`;  
+        });  
+        walletHistory.innerText=out||"No history found";  
+      });  
+    }  
+      
+    // ================= MENU FUNCTIONS =================  
+    function toggleMenu(){  
+      const menu = document.getElementById('sideMenu');  
+      if(menu.style.left==='0px') menu.style.left='-260px';  
+      else menu.style.left='0px';  
+    }  
+    function closeMenu(){ document.getElementById('sideMenu').style.left='-260px'; }  
+    function showPasswordChange(){  
+      let newPass = prompt("Enter new password:");  
+      if(!newPass) return alert("Password not changed");  
+      db.collection("logins").doc(loginId).set({password:newPass}).then(()=>{  
+        alert("Password updated successfully.");  
+      });  
+    }  
+      
+    document.addEventListener('click', function(e){  
+      const menu = document.getElementById('sideMenu');  
+      const btn = document.getElementById('menuBtn');  
+      if(menu && menu.style.left==='0px' && !menu.contains(e.target) && !btn.contains(e.target)){  
+        menu.style.left='-260px';  
+      }  
+    });  
+  </script>  
+</body>
+</html>
