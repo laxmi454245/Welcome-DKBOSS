@@ -53,6 +53,9 @@
     /* ===== HISTORY & LIVE RESULTS ===== */  
     .history{font-size:12px;background:#111;color:#0f0;padding:10px;border-radius:5px;max-height:180px;overflow:auto;word-break:break-word;}  
     #liveBulk{background:#111;color:#0f0;padding:10px;border-radius:6px;max-height:220px;overflow:auto;font-size:13px;word-break:break-word;white-space:pre-wrap;}  
+    .count-status {font-size: 15px; font-weight: bold; margin: 10px 0; color: #333;}
+    .count-status .valid {color: #28a745;}
+    .count-status .invalid {color: #dc3545;}
       
     /* ===== SIDE MENU ===== */  
     #sideMenu{  
@@ -131,6 +134,7 @@
         <h3>Bulk Search</h3>  
         <textarea id="bulkConsumers" rows="6" placeholder="Bulk CA / BP Numbers (one per line)"></textarea>  
         <button onclick="startBulkProcessing()">Bulk Process</button>  
+        <button onclick="stopBulkProcessing()" id="stopBtn" style="display:none; background:#dc3545;">Stop Search</button>  
         <button onclick="autoFillConsumers()">Autofill</button>  
         <button onclick="exportBulkToExcel()" id="bulkExportBtn" style="display:none; background:#28a745;">Export Excel</button>  
         
@@ -139,6 +143,9 @@
         </div>  
         
         <h3>📥 Live Bulk Result</h3>  
+        <div class="count-status">
+          ✅ Valid: <span id="validCount" class="valid">0</span> | ❌ Invalid: <span id="invalidCount" class="invalid">0</span>
+        </div>
         <div id="liveBulk">Waiting for input...</div>  
         
         <h3>📜 Wallet History</h3>  
@@ -237,7 +244,6 @@
           
         deductWalletSecure(1,"Single Search", caVal).then(() => {
             result.innerText = "Fetching data...";
-            // Replaced with your new Worker API
             fetch(`https://billguru.kzthubbjdo.workers.dev/?ca_no=${caVal}`)  
             .then(r=>r.json())  
             .then(d=>{
@@ -250,113 +256,101 @@
     }  
       
     // ================= BULK SEARCH =================  
-    let bulkData=[], processed=0, bulkLock=false;  
+    let bulkData=[], processed=0, bulkLock=false, stopFlag=false;  
+    let validCnt=0, invalidCnt=0;
+
     function startBulkProcessing(){  
       if(bulkLock) return;  
       bulkLock=true;  
+      stopFlag=false;
       const list=bulkConsumers.value.split("\n").map(x=>x.trim()).filter(x=>x);  
       if(list.length===0){bulkLock=false;return alert("No numbers found.");}  
       
-      bulkData=[]; processed=0;  
+      bulkData=[]; processed=0; validCnt=0; invalidCnt=0;
+      validCount.innerText = "0";
+      invalidCount.innerText = "0";
       liveBulk.innerText="";  
       progressBar.style.width="0%";  
       progressBar.innerText="0%";  
       bulkExportBtn.style.display="none";  
+      stopBtn.style.display="inline-block";
       
       processNextSecure(list, 0);  
     }  
+
+    function stopBulkProcessing(){
+      stopFlag=true;
+      liveBulk.innerText += `\n⛔ [STOPPED BY USER] Processing stopped. You can export fetched data.`;
+      stopBtn.style.display="none";
+      bulkLock=false;
+      if(bulkData.length > 0) {
+        bulkExportBtn.style.display="inline-block";
+      }
+    }
       
     function processNextSecure(list, i){  
+      if(stopFlag) return;
+
       if(i>=list.length){  
-        bulkExportBtn.style.display="block";  
+        if(bulkData.length > 0) bulkExportBtn.style.display="inline-block";  
+        stopBtn.style.display="none";
         bulkLock=false;  
         return;  
       }  
        
       deductWalletSecure(1, "Bulk Search", list[i]).then(() => {
-        // Replaced with your new Worker API
+        if(stopFlag) return;
+
         fetch(`https://billguru.kzthubbjdo.workers.dev/?ca_no=${list[i]}`)  
         .then(r=>r.json())  
         .then(res=>{  
-          // Mapping according to your raw structure: res.data.Field
+          if(stopFlag) return;
           let d = res.data || {};
           
-          let row={  
-            "Name": d.Name || "Not Found",                  // Column A
-            "Mobile_No": d.Mobile_No || "Not Found",        // Column B
-            "Email": d.Email || "Not Found",                // Column C
-            "Contract_Account": d.Contract_Account || list[i], // Column D
-            "Partner": d.Partner || "",
-            "Legacy_CRN": d.Legacy_CRN || "",
-            "Plot_No": d.Plot_No || "",
-            "Flat_No": d.Flat_No || "",
-            "Floor": d.Floor || "",
-            "Wing": d.Wing || "",
-            "Bldg_Name": d.Bldg_Name || "",
-            "Colony": d.Colony || "",
-            "Road_name": d.Road_name || "",
-            "Land_Mark": d.Land_Mark || "",
-            "Location": d.Location || "",
-            "City": d.City || "",
-            "Postal_code": d.Postal_code || "",
-            "Tel_No": d.Tel_No || "",
-            "Drs": d.Drs || "",
-            "Amount": d.Amount || "",
-            "Due_Date": d.Due_Date || "",
-            "Bill_Date": d.Bill_Date || "",
-            "Dispatch_Date": d.Dispatch_Date || "",
-            "Meter_No": d.Meter_No || "",
-            "VIP": d.VIP || "",
-            "Modify_date": d.Modify_date || "",
-            "Create_date": d.Create_date || "",
-            "Bill_mon": d.Bill_mon || "",
-            "Opening": d.Opening || "",
-            "Closing": d.Closing || "",
-            "Bill_no": d.Bill_no || "",
-            "Sr_no": d.Sr_no || "",
-            "Conn_Obj": d.Conn_Obj || "",
-            "BP_CreateDt": d.BP_CreateDt || "",
-            "Bill_group": d.Bill_group || "",
-            "MoveInDt": d.MoveInDt || "",
-            "AppForm": d.AppForm || "",
-            "MoveOutDt": d.MoveOutDt || "",
-            "BP_PDCDt": d.BP_PDCDt || "",
-            "Comments": d.Comments || "",
-            "Aadhar_No": d.Aadhar_No || "",
-            "Idtype_Dom": d.Idtype_Dom || "",
-            "Mobile_Update": d.Mobile_Update || "",
-            "Mobile_UpdateOn": d.Mobile_UpdateOn || "",
-            "Mobile_New": d.Mobile_New || "",
-            "Email_New": d.Email_New || "",
-            "Contact_Update_On": d.Contact_Update_On || "",
-            "mrdocno": d.mrdocno || "",
-            "nextbilldate": d.nextbilldate || "",
-            "acc_no": d.acc_no || "",
-            "mandate_limit": d.mandate_limit || "",
-            "mandate_date": d.mandate_date || "",
-            "umrn": d.umrn || "",
-            "IsCancelMandate": d.IsCancelMandate || "",
-            "CancelRequestDate": d.CancelRequestDate || "",
-            "Mrreason": d.Mrreason || "",
-            "RegOTP": d.RegOTP || "",
-            "isSync": d.isSync || "",
-            "KYCOTP": d.KYCOTP || "",
-            "KYCEMAILOTP": d.KYCEMAILOTP || "",
-            "LOGOTP": d.LOGOTP || ""
-          };  
-          
-          bulkData.push(row);  
-          liveBulk.innerText += `CA: ${row.Contract_Account} | ${row.Name} | ${row.Mobile_No}\n`;  
-          
+          // Check if 'Mobile_New' exists and is not empty
+          if (d.Mobile_New && String(d.Mobile_New).trim() !== "") {
+            validCnt++;
+            validCount.innerText = validCnt;
+
+            // 1. Column Order Setup:
+            let row = {  
+              "Name": d.Name || "Not Found",                      // Col A
+              "Mobile_New": d.Mobile_New,                         // Col B
+              "Email": d.Email || "Not Found",                    // Col C
+              "Contract_Account": d.Contract_Account || list[i],  // Col D
+              "Partner": d.Partner || ""                          // Col E
+            };  
+            
+            // 2. Automatic Auto-fill for all remaining fields serial-wise
+            Object.keys(d).forEach(key => {
+              if (!row.hasOwnProperty(key)) {
+                row[key] = d[key] !== null && d[key] !== undefined ? d[key] : "";
+              }
+            });
+
+            bulkData.push(row);  
+            liveBulk.innerText += `[SAVED] CA: ${row.Contract_Account} | Mobile_New: ${row.Mobile_New} | ${row.Name}\n`;  
+          } else {
+            invalidCnt++;
+            invalidCount.innerText = invalidCnt;
+            liveBulk.innerText += `[SKIPPED] CA: ${list[i]} | No 'Mobile_New' data\n`;
+          }
+
           updateProgressBar(list.length);
           processNextSecure(list, i+1);  
         })  
         .catch(()=>{  
+          if(stopFlag) return;
+          invalidCnt++;
+          invalidCount.innerText = invalidCnt;
           liveBulk.innerText += `CA: ${list[i]} | API Fetch Error\n`;
           updateProgressBar(list.length);
           processNextSecure(list, i+1);  
         });  
       }).catch(err => {
+        if(stopFlag) return;
+        invalidCnt++;
+        invalidCount.innerText = invalidCnt;
         liveBulk.innerText += `CA: ${list[i]} | Stopped: ${err}\n`;
         updateProgressBar(list.length);
         processNextSecure(list, i+1);
@@ -372,7 +366,7 @@
       
     // ================= EXCEL EXPORT =================  
     function exportBulkToExcel(){  
-      if(bulkData.length===0) return alert("No data to export!");  
+      if(bulkData.length===0) return alert("No valid data (with Mobile_New) to export!");  
       const ws=XLSX.utils.json_to_sheet(bulkData);  
       const wb=XLSX.utils.book_new();  
       XLSX.utils.book_append_sheet(wb,ws,"Bulk Bills");  
